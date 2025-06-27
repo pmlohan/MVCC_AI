@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Comparison Prototype</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #4a6fa5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .app-header {
+            background-color: #4a6fa5;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .panel {
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .document-item {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #4a6fa5;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+        }
+        .sentence {
+            display: inline;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 3px;
+        }
+        .paragraph {
+            margin-bottom: 16px;
+        }
+        .all-docs {
+            background-color: #cfe2ff;
+        }
+        .some-docs {
+            background-color: #e2e3e5;
+        }
+        .doc-1 {
+            background-color: #f8d7da;
+        }
+        .doc-2 {
+            background-color: #d1e7dd;
+        }
+        .doc-3 {
+            background-color: #fff3cd;
+        }
+        .doc-4 {
+            background-color: #d3d3ff;
+        }
+        .doc-5 {
+            background-color: #ffddff;
+        }
+        .source-info {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .legend {
+            margin-top: 30px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .color-box {
+            width: 15px;
+            height: 15px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        .controls {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .threshold-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .threshold-control label {
+            margin-right: 10px;
+            min-width: 150px;
+        }
+        .threshold-control input {
+            margin-bottom: 0;
+        }
+        .threshold-value {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <h1>Document Comparison Prototype</h1>
+        </div>
+
+        <div class="grid">
+            <!-- Left Panel - Input Documents -->
+            <div class="panel">
+                <h2>Input Documents</h2>
+                <div id="documents-container">
+                    <!-- Documents will be added here -->
+                </div>
+
+                <h3>Add New Document</h3>
+                <input type="text" id="document-name" placeholder="Document Name">
+                <textarea id="document-content" placeholder="Enter document text..."></textarea>
+                <button id="add-document" class="btn btn-primary">Add Document</button>
+                
+                <div class="controls">
+                    <h3>Algorithm Settings</h3>
+                    <div class="threshold-control">
+                        <label for="similarity-threshold">Similarity Threshold:</label>
+                        <input type="range" id="similarity-threshold" min="0" max="100" value="70">
+                        <span class="threshold-value" id="threshold-value">70%</span>
+                    </div>
+                    <div class="threshold-control">
+                        <label for="maintain-context">Maintain Context:</label>
+                        <input type="checkbox" id="maintain-context" checked>
+                        <span class="threshold-value">Keep similar sentences together</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button id="compare-documents" class="btn btn-success">Compare & Consolidate</button>
+                </div>
+            </div>
+
+            <!-- Right Panel - Results -->
+            <div class="panel">
+                <h2>Consolidated Document</h2>
+                <div id="consolidated-container">
+                    <p id="no-results-message">Click "Compare & Consolidate" to see results</p>
+                    <div id="consolidated-content" style="display: none;"></div>
+                    
+                    <div id="source-info" class="source-info" style="display: none;">
+                        <h3>Source Information</h3>
+                        <div id="source-details"></div>
+                    </div>
+
+                    <div class="legend">
+                        <h3>Source Legend:</h3>
+                        <div id="legend-container">
+                            <!-- Legend items will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // App state
+            const state = {
+                documents: [
+                    { 
+                        id: 1, 
+                        name: "Document 1", 
+                        content: "The quick brown fox jumps over the lazy dog. Climate change is a global challenge requiring immediate action. The economy has shown significant growth in the last quarter. Many companies are investing in renewable energy sources."
+                    },
+                    { 
+                        id: 2, 
+                        name: "Document 2", 
+                        content: "The quick brown fox jumps over the lazy dog. Global warming continues to affect our planet in various ways. The economy has shown remarkable improvement recently. Renewable energy investment has increased dramatically over the past year."
+                    },
+                    { 
+                        id: 3, 
+                        name: "Document 3", 
+                        content: "The clever brown fox jumps over the lazy dog. Climate change is a global challenge that needs our attention now. Economic indicators have been positive in the past few months. We must continue to develop sustainable energy solutions."
+                    }
+                ],
+                consolidatedDocument: null,
+                selectedSentence: null,
+                similarityThreshold: 0.7,
+                maintainContext: true
+            };
+
+            // DOM elements
+            const documentsContainer = document.getElementById('documents-container');
+            const documentNameInput = document.getElementById('document-name');
+            const documentContentInput = document.getElementById('document-content');
+            const addDocumentButton = document.getElementById('add-document');
+            const compareButton = document.getElementById('compare-documents');
+            const consolidatedContent = document.getElementById('consolidated-content');
+            const noResultsMessage = document.getElementById('no-results-message');
+            const sourceInfo = document.getElementById('source-info');
+            const sourceDetails = document.getElementById('source-details');
+            const legendContainer = document.getElementById('legend-container');
+            const similarityThresholdInput = document.getElementById('similarity-threshold');
+            const thresholdValue = document.getElementById('threshold-value');
+            const maintainContextCheckbox = document.getElementById('maintain-context');
+
+            // Initialize
+            renderDocuments();
+
+            // Event listeners
+            addDocumentButton.addEventListener('click', addDocument);
+            compareButton.addEventListener('click', compareDocuments);
+            similarityThresholdInput.addEventListener('input', updateThreshold);
+            maintainContextCheckbox.addEventListener('change', updateMaintainContext);
+
+            // Functions
+            function updateThreshold() {
+                state.similarityThreshold = similarityThresholdInput.value / 100;
+                thresholdValue.textContent = `${similarityThresholdInput.value}%`;
+            }
+
+            function updateMaintainContext() {
+                state.maintainContext = maintainContextCheckbox.checked;
+            }
+
+            function renderDocuments() {
+                documentsContainer.innerHTML = '';
+                
+                state.documents.forEach(doc => {
+                    const docElement = document.createElement('div');
+                    docElement.className = 'document-item';
+                    
+                    const docHeader = document.createElement('div');
+                    docHeader.className = 'document-header';
+                    
+                    const docTitle = document.createElement('h3');
+                    docTitle.textContent = doc.name;
+                    docTitle.style.margin = '0';
+                    
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'btn btn-danger';
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.addEventListener('click', () => deleteDocument(doc.id));
+                    
+                    docHeader.appendChild(docTitle);
+                    docHeader.appendChild(deleteButton);
+                    
+                    const docContent = document.createElement('p');
+                    docContent.textContent = doc.content;
+                    
+                    docElement.appendChild(docHeader);
+                    docElement.appendChild(docContent);
+                    
+                    documentsContainer.appendChild(docElement);
+                });
+            }
+
+            function addDocument() {
+                const name = documentNameInput.value.trim();
+                const content = documentContentInput.value.trim();
+                
+                if (!name || !content) {
+                    alert('Please enter both document name and content');
+                    return;
+                }
+                
+                const newDoc = {
+                    id: Date.now(), // Use timestamp as a simple unique ID
+                    name,
+                    content
+                };
+                
+                state.documents.push(newDoc);
+                renderDocuments();
+                
+                // Clear inputs
+                documentNameInput.value = '';
+                documentContentInput.value = '';
+            }
+
+            function deleteDocument(id) {
+                state.documents = state.documents.filter(doc => doc.id !== id);
+                renderDocuments();
+            }
+
+            function compareDocuments() {
+                if (state.documents.length < 2) {
+                    alert('Please add at least 2 documents to compare');
+                    return;
+                }
+                
+                // Run the comparison algorithm
+                if (state.maintainContext) {
+                    state.consolidatedDocument = consolidateDocumentsWithContext(state.documents);
+                } else {
+                    state.consolidatedDocument = consolidateDocuments(state.documents);
+                }
+                renderConsolidatedDocument();
+            }
+
+            function renderConsolidatedDocument() {
+                if (!state.consolidatedDocument) return;
+                
+                noResultsMessage.style.display = 'none';
+                consolidatedContent.style.display = 'block';
+                consolidatedContent.innerHTML = '';
+                
+                if (state.maintainContext) {
+                    // Render paragraphs with sentences
+                    state.consolidatedDocument.forEach((paragraph, pIndex) => {
+                        const paragraphElement = document.createElement('div');
+                        paragraphElement.className = 'paragraph';
+                        
+                        paragraph.sentences.forEach((sentence, sIndex) => {
+                            const sentenceElement = document.createElement('span');
+                            sentenceElement.className = `sentence ${getSourceClass(sentence.sources)}`;
+                            sentenceElement.textContent = sentence.text + ' ';
+                            sentenceElement.dataset.pIndex = pIndex;
+                            sentenceElement.dataset.sIndex = sIndex;
+                            
+                            sentenceElement.addEventListener('click', () => {
+                                state.selectedSentence = sentence;
+                                showSourceInfo(sentence);
+                            });
+                            
+                            paragraphElement.appendChild(sentenceElement);
+                        });
+                        
+                        consolidatedContent.appendChild(paragraphElement);
+                    });
+                } else {
+                    // Flat list of sentences
+                    state.consolidatedDocument.forEach((sentence, index) => {
+                        const sentenceElement = document.createElement('span');
+                        sentenceElement.className = `sentence ${getSourceClass(sentence.sources)}`;
+                        sentenceElement.textContent = sentence.text + ' ';
+                        sentenceElement.dataset.index = index;
+                        
+                        sentenceElement.addEventListener('click', () => {
+                            state.selectedSentence = sentence;
+                            showSourceInfo(sentence);
+                        });
+                        
+                        consolidatedContent.appendChild(sentenceElement);
+                    });
+                }
+                
+                // Update legend
+                updateLegend();
+            }
+
+            function getSourceClass(sources) {
+                const uniqueDocIds = new Set(sources.map(s => s.documentId));
+                
+                // If it appears in all documents
+                if (uniqueDocIds.size === state.documents.length) {
+                    return 'all-docs';
+                }
+                
+                // If it appears in only one document
+                if (uniqueDocIds.size === 1) {
+                    const docId = Array.from(uniqueDocIds)[0];
+                    const docIndex = state.documents.findIndex(d => d.id === docId);
+                    return `doc-${(docIndex % 5) + 1}`;
+                }
+                
+                // If it appears in some documents
+                return 'some-docs';
+            }
+
+            function showSourceInfo(sentence) {
+                sourceInfo.style.display = 'block';
+                sourceDetails.innerHTML = '';
+                
+                const sourcesHeading = document.createElement('p');
+                sourcesHeading.textContent = `This content appears in ${sentence.sources.length} place(s):`;
+                sourceDetails.appendChild(sourcesHeading);
+                
+                const sourcesList = document.createElement('ul');
+                
+                sentence.sources.forEach(source => {
+                    const docName = state.documents.find(d => d.id === source.documentId)?.name || 'Unknown Document';
+                    
+                    const sourceItem = document.createElement('li');
+                    sourceItem.innerHTML = `<strong>${docName}:</strong> "${source.text}"`;
+                    sourcesList.appendChild(sourceItem);
+                });
+                
+                sourceDetails.appendChild(sourcesList);
+            }
+
+            function updateLegend() {
+                legendContainer.innerHTML = '';
+                
+                // All documents
+                addLegendItem('all-docs', 'Appears in all documents');
+                
+                // Individual documents
+                state.documents.forEach((doc, index) => {
+                    addLegendItem(`doc-${(index % 5) + 1}`, `Only in ${doc.name}`);
+                });
+                
+                // Some documents
+                addLegendItem('some-docs', 'Appears in some documents');
+            }
+
+            function addLegendItem(className, text) {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = `color-box ${className}`;
+                
+                const label = document.createElement('span');
+                label.textContent = text;
+                
+                item.appendChild(colorBox);
+                item.appendChild(label);
+                
+                legendContainer.appendChild(item);
+            }
+
+            // Original algorithm - processes sentences independently
+            function consolidateDocuments(documents) {
+                // Find groups of similar sentences
+                const sentenceGroups = findSimilarSentences(documents);
+                
+                // For each group, select the best representative
+                return sentenceGroups.map(group => {
+                    // Choose the sentence with the best representation
+                    // (appears in most documents)
+                    const docFrequency = {};
+                    const uniqueDocs = new Set();
+                    
+                    group.forEach(item => {
+                        uniqueDocs.add(item.documentId);
+                        docFrequency[item.documentId] = (docFrequency[item.documentId] || 0) + 1;
+                    });
+                    
+                    // If it appears in multiple documents, prioritize exact matches
+                    if (uniqueDocs.size > 1) {
+                        // Group by text
+                        const textGroups = {};
+                        group.forEach(item => {
+                            if (!textGroups[item.text]) {
+                                textGroups[item.text] = [];
+                            }
+                            textGroups[item.text].push(item);
+                        });
+                        
+                        // Find text that appears in most documents
+                        let bestText = '';
+                        let bestDocCount = 0;
+                        
+                        for (const text in textGroups) {
+                            const docsWithText = new Set(textGroups[text].map(item => item.documentId));
+                            if (docsWithText.size > bestDocCount) {
+                                bestText = text;
+                                bestDocCount = docsWithText.size;
+                            }
+                        }
+                        
+                        // If we found a best text, use it
+                        if (bestText) {
+                            return {
+                                text: bestText,
+                                sources: group
+                            };
+                        }
+                    }
+                    
+                    // Default: use the first item's text
+                    return {
+                        text: group[0].text,
+                        sources: group
+                    };
+                });
+            }
+
+            // NEW FUNCTION: Context-aware consolidation
+            function consolidateDocumentsWithContext(documents) {
+                // First, identify the document with the most complete structure
+                // to use as a template for the final document
+                let templateDocId = findTemplateDocument(documents);
+                
+                // Extract paragraphs from the template document
+                const templateDoc = documents.find(d => d.id === templateDocId);
+                const paragraphs = extractParagraphs(templateDoc.content);
+                
+                // Process each paragraph
+                const processedParagraphs = paragraphs.map(paragraphText => {
+                    // Extract sentences from this paragraph
+                    const sentences = preprocessText(paragraphText);
+                    
+                    // Process each sentence in this paragraph
+                    const processedSentences = sentences.map(sentence => {
+                        // Find similar sentences across all documents
+                        const similarSentences = findSimilarSentencesForOne(sentence, documents, templateDoc.id);
+                        
+                        // Create a consolidated sentence with source tracking
+                        return createConsolidatedSentence(sentence, similarSentences, templateDoc.id);
+                    });
+                    
+                    return {
+                        sentences: processedSentences
+                    };
+                });
+                
+                // Now process sentences from other documents that weren't matched
+                // and add them as new paragraphs
+                const unmatchedSentences = findUnmatchedSentences(documents, templateDocId);
+                
+                if (unmatchedSentences.length > 0) {
+                    // Group unmatched sentences by document and paragraph context
+                    const additionalParagraphs = groupUnmatchedSentencesByContext(unmatchedSentences);
+                    
+                    // Add these paragraphs to the result
+                    processedParagraphs.push(...additionalParagraphs);
+                }
+                
+                return processedParagraphs;
+            }
+            
+            // Function to find the best template document (most comprehensive)
+            function findTemplateDocument(documents) {
+                // Simple approach: use the document with the most sentences
+                let bestDocId = documents[0].id;
+                let maxSentences = preprocessText(documents[0].content).length;
+                
+                for (let i = 1; i < documents.length; i++) {
+                    const sentenceCount = preprocessText(documents[i].content).length;
+                    if (sentenceCount > maxSentences) {
+                        maxSentences = sentenceCount;
+                        bestDocId = documents[i].id;
+                    }
+                }
+                
+                return bestDocId;
+            }
+            
+            // Function to extract paragraphs from text
+            function extractParagraphs(text) {
+                // Split by double newlines or other paragraph markers
+                return text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+            }
+            
+            // Function to find similar sentences for a single sentence
+            function findSimilarSentencesForOne(sentence, documents, excludeDocId = null) {
+                const similarSentences = [];
+                
+                documents.forEach(doc => {
+                    // Skip the document we're using as template if specified
+                    if (excludeDocId && doc.id === excludeDocId) return;
+                    
+                    const sentences = preprocessText(doc.content);
+                    
+                    sentences.forEach((docSentence, position) => {
+                        const similarity = calculateSimilarity(sentence, docSentence);
+                        
+                        if (similarity >= state.similarityThreshold) {
+                            similarSentences.push({
+                                text: docSentence,
+                                documentId: doc.id,
+                                position: position,
+                                similarity: similarity
+                            });
+                        }
+                    });
+                });
+                
+                return similarSentences;
+            }
+            
+            // Function to create a consolidated sentence with source tracking
+            function createConsolidatedSentence(sentence, similarSentences, templateDocId) {
+                // Start with the template sentence
+                const sources = [
+                    {
+                        text: sentence,
+                        documentId: templateDocId
+                    }
+                ];
+                
+                // Add similar sentences from other documents
+                sources.push(...similarSentences);
+                
+                // For simplicity, we'll use the template sentence as the representative
+                // In a more sophisticated version, we might pick the most common or most representative
+                return {
+                    text: sentence,
+                    sources: sources
+                };
+            }
+            
+            // Function to find sentences that weren't matched to the template
+            function findUnmatchedSentences(documents, templateDocId) {
+                const templateDoc = documents.find(d => d.id === templateDocId);
+                const templateSentences = preprocessText(templateDoc.content);
+                
+                const unmatchedSentences = [];
+                
+                documents.forEach(doc => {
+                    if (doc.id === templateDocId) return; // Skip template
+                    
+                    const docSentences = preprocessText(doc.content);
+                    
+                    // Create a map to track whether each sentence has been matched
+                    const isMatched = new Array(docSentences.length).fill(false);
+                    
+                    // Try to match each template sentence
+                    templateSentences.forEach(templateSentence => {
+                        let bestMatchIndex = -1;
+                        let bestSimilarity = 0;
+                        
+                        // Find the best match for this template sentence
+                        docSentences.forEach((docSentence, index) => {
+                            if (isMatched[index]) return; // Skip already matched
+                            
+                            const similarity = calculateSimilarity(templateSentence, docSentence);
+                            
+                            if (similarity >= state.similarityThreshold && similarity > bestSimilarity) {
+                                bestSimilarity = similarity;
+                                bestMatchIndex = index;
+                            }
+                        });
+                        
+                        // Mark the best match as matched
+                        if (bestMatchIndex >= 0) {
+                            isMatched[bestMatchIndex] = true;
+                        }
+                    });
+                    
+                    // Collect unmatched sentences
+                    docSentences.forEach((sentence, index) => {
+                        if (!isMatched[index]) {
+                            unmatchedSentences.push({
+                                text: sentence,
+                                documentId: doc.id,
+                                position: index
+                            });
+                        }
+                    });
+                });
+                
+                return unmatchedSentences;
+            }
+            
+            // Group unmatched sentences by their context (document and adjacent sentences)
+            function groupUnmatchedSentencesByContext(unmatchedSentences) {
+                // Group by document first
+                const byDocument = {};
+                
+                unmatchedSentences.forEach(sentence => {
+                    if (!byDocument[sentence.documentId]) {
+                        byDocument[sentence.documentId] = [];
+                    }
+                    byDocument[sentence.documentId].push(sentence);
+                });
+                
+                // For each document, group adjacent sentences together
+                const paragraphs = [];
+                
+                Object.keys(byDocument).forEach(docId => {
+                    const sentences = byDocument[docId].sort((a, b) => a.position - b.position);
+                    
+                    let currentParagraph = [];
+                    let lastPosition = -2;
+                    
+                    sentences.forEach(sentence => {
+                        // If this sentence is adjacent to the last one, add to current paragraph
+                        if (sentence.position === lastPosition + 1) {
+                            currentParagraph.push(sentence);
+                        } else {
+                            // Start a new paragraph
+                            if (currentParagraph.length > 0) {
+                                paragraphs.push({
+                                    sentences: currentParagraph.map(s => ({
+                                        text: s.text,
+                                        sources: [{
+                                            text: s.text,
+                                            documentId: parseInt(docId)
+                                        }]
+                                    }))
+                                });
+                            }
+                            currentParagraph = [sentence];
+                        }
+                        
+                        lastPosition = sentence.position;
+                    });
+                    
+                    // Add the last paragraph
+                    if (currentParagraph.length > 0) {
+                        paragraphs.push({
+                            sentences: currentParagraph.map(s => ({
+                                text: s.text,
+                                sources: [{
+                                    text: s.text,
+                                    documentId: parseInt(docId)
+                                }]
+                            }))
+                        });
+                    }
+                });
+                
+                return paragraphs;
+            }
+
+            // Original function to find similar sentences
+            function findSimilarSentences(documents) {
+                // Extract all sentences from all documents
+                const allSentences = [];
+                
+                documents.forEach(doc => {
+                    const sentences = preprocessText(doc.content);
+                    sentences.forEach((sentence, index) => {
+                        allSentences.push({
+                            text: sentence,
+                            documentId: doc.id,
+                            position: index
+                        });
+                    });
+                });
+                
+                // Group similar sentences
+                const sentenceGroups = [];
+                const processedIndices = new Set();
+                
+                for (let i = 0; i < allSentences.length; i++) {
+                    if (processedIndices.has(i)) continue;
+                    
+                    const currentSentence = allSentences[i];
+                    const similarSentences = [currentSentence];
+                    processedIndices.add(i);
+                    
+                    // Find similar sentences to the current one
+                    for (let j = i + 1; j < allSentences.length; j++) {
+                        if (processedIndices.has(j)) continue;
+                        
+                        const similarity = calculateSimilarity(currentSentence.text, allSentences[j].text);
+                        
+                        // If similarity above threshold, consider them similar
+                        if (similarity >= state.similarityThreshold) {
+                            similarSentences.push(allSentences[j]);
+                            processedIndices.add(j);
+                        }
+                    }
+                    
+                    sentenceGroups.push(similarSentences);
+                }
+                
+                return sentenceGroups;
+            }
+
+            function preprocessText(text) {
+                // Simple sentence splitting
+                return text
+                    .split(/(?<=[.!?])\s+/)
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+            }
+
+            function calculateSimilarity(sent1, sent2) {
+                // Normalize sentences
+                const norm1 = sent1.toLowerCase().replace(/[^\w\s]/g, '');
+                const norm2 = sent2.toLowerCase().replace(/[^\w\s]/g, '');
+                
+                // Create word sets
+                const words1 = new Set(norm1.split(/\s+/));
+                const words2 = new Set(norm2.split(/\s+/));
+                
+                // Exact match
+                if (norm1 === norm2) return 1.0;
+                
+                // Calculate Jaccard similarity
+                const intersection = new Set([...words1].filter(x => words2.has(x)));
+                const union = new Set([...words1, ...words2]);
+                
+                return intersection.size / union.size;
+            }
+        });
+    </script>
+</body>
+</html>
