@@ -216,6 +216,7 @@
                             <!-- Legend items will be added here -->
                         </div>
                     </div>
+                    <button id="download-document" class="btn btn-primary" style="margin-top: 10px; display: none;">Download Consolidated Document</button>
                 </div>
             </div>
         </div>
@@ -262,6 +263,7 @@
             const similarityThresholdInput = document.getElementById('similarity-threshold');
             const thresholdValue = document.getElementById('threshold-value');
             const maintainContextCheckbox = document.getElementById('maintain-context');
+            const downloadButton = document.getElementById('download-document');
 
             // Initialize
             renderDocuments();
@@ -271,6 +273,7 @@
             compareButton.addEventListener('click', compareDocuments);
             similarityThresholdInput.addEventListener('input', updateThreshold);
             maintainContextCheckbox.addEventListener('change', updateMaintainContext);
+            downloadButton.addEventListener('click', downloadConsolidatedDocument);
 
             // Functions
             function updateThreshold() {
@@ -359,10 +362,11 @@
 
             function renderConsolidatedDocument() {
                 if (!state.consolidatedDocument) return;
-                
+
                 noResultsMessage.style.display = 'none';
                 consolidatedContent.style.display = 'block';
                 consolidatedContent.innerHTML = '';
+                downloadButton.style.display = 'inline-block';
                 
                 if (state.maintainContext) {
                     // Render paragraphs with sentences
@@ -834,8 +838,31 @@
                 // Calculate Jaccard similarity
                 const intersection = new Set([...words1].filter(x => words2.has(x)));
                 const union = new Set([...words1, ...words2]);
-                
+
                 return intersection.size / union.size;
+            }
+
+            function downloadConsolidatedDocument() {
+                if (!state.consolidatedDocument) return;
+
+                let text = '';
+                if (state.maintainContext) {
+                    text = state.consolidatedDocument
+                        .map(p => p.sentences.map(s => s.text).join(' '))
+                        .join('\n\n');
+                } else {
+                    text = state.consolidatedDocument.map(s => s.text).join(' ');
+                }
+
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'consolidated.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         });
     </script>
